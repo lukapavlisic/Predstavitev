@@ -6,6 +6,7 @@ from datetime import datetime
 from tinydb import where
 
 app = Flask(__name__)
+app.secret_key = 'Milči'
 
 db = TinyDB('data.json')
 users_table = db.table('users')
