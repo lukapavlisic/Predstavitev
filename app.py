@@ -6,7 +6,6 @@ from datetime import datetime
 from tinydb import where
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'
 
 db = TinyDB('data.json')
 users_table = db.table('users')
@@ -25,7 +24,6 @@ def search():
     market = request.form.get('market')
     age = request.form.get('age')
     
-    # Custom budget handling
     if budget == 'custom':
         try:
             budget = int(request.form.get('custom_budget', 0))
@@ -34,7 +32,6 @@ def search():
     else:
         budget = int(budget) if budget != 'any' else 999999
     
-    # Filtriranje avtomobilov
     cars = cars_table.all()
     filtered_cars = []
     
@@ -58,7 +55,6 @@ def car_detail(car_id):
     car = car[0]
     comments = comments_table.search(Query().car_id == car_id)
     
-    # Izračun povprečne ocene
     if comments:
         avg_rating = sum(c['rating'] for c in comments) / len(comments)
         avg_rating = round(avg_rating, 1)
