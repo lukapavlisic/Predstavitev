@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iskanje Avtomobilov</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <div class="nav">
+            <div class="logo">
+                <h1>Best car for your budget</h1>
+            </div>
+            <div class="auth-buttons">
+                {% if session.user_id %}
+                    <span>Pozdravljen, {{ session.user_id }}!</span>
+                    {% if session.is_admin %}
+                        <span class="admin-badge">ADMIN</span>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline">Odjavi se</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-outline">Prijavi se</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary">Registriraj se</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="search-form">
+            <h2>Poiščite svoj popoln avtomobil</h2>
+            
+            <form method="POST" action="{{ url_for('search') }}">
+                <div class="form-group">
+                    <label for="budget">Proračun (€):</label>
+                    <select name="budget" id="budget" onchange="toggleCustomBudget()">
+                        <option value="any">Vseeno</option>
+                        <option value="15000">Do 15.000€</option>
+                        <option value="25000">Do 25.000€</option>
+                        <option value="35000">Do 35.000€</option>
+                        <option value="50000">Do 50.000€</option>
+                        <option value="custom">Vnesi svoj proračun</option>
+                    </select>
+                    <input type="number" name="custom_budget" id="custom_budget" placeholder="Vnesi znesek" style="display: none; margin-top: 10px;">
+                </div>
+
+                <div class="form-group">
+                    <label for="type">Tip avtomobila:</label>
+                    <select name="type" id="type">
+                        <option value="any">Vseeno</option>
+                        <option value="sport">Športen</option>
+                        <option value="spacious">Prostoren</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="fuel">Gorivo:</label>
+                    <select name="fuel" id="fuel">
+                        <option value="any">Vseeno</option>
+                        <option value="petrol">Bencin</option>
+                        <option value="diesel">Diesel</option>
+                        <option value="hybrid">Hibrid</option>
+                        <option value="electric">Elektrika</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="market">Trg:</label>
+                    <select name="market" id="market">
+                        <option value="any">Vseeno</option>
+                        <option value="german">Nemški trg</option>
+                        <option value="slovenian">Slovenski trg</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="age">Starost:</label>
+                    <select name="age" id="age">
+                        <option value="any">Vseeno</option>
+                        <option value="modern">Moderen (2018+)</option>
+                        <option value="older">Starejši (pred 2018)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-large">Poišči avtomobile</button>
+            </form>
+        </div>
+
+        <div class="ad-placeholder">
+            <img src="{{ url_for('static', filename='image.png') }}" alt="Oglas" width="1000px" height="100px">
+        </div>
+
+        
+
+        <div id="reservation-box" style="margin-top: 30px; padding: 20px; background: #f0fff0; border-radius: 8px; max-width: 500px;">
+            <h3>Rezerviraj termin za preventivni pregled avtomobila</h3>
+            <form id="reservation-form">
+                <label for="car-select">Izberi avto:</label>
+                <select id="car-select" name="car_id"></select><br><br>
+                <label for="date">Datum:</label>
+                <input type="date" id="date" name="date" required><br><br>
+                <label for="time">Ura:</label>
+                <input type="time" id="time" name="time" required><br><br>
+                <button type="submit" class="btn btn-primary">Rezerviraj</button>
+            </form>
+            <div id="reservation-message" style="margin-top:10px;"></div>
+            <div id="calendar-box" style="margin-top:20px;"></div>
+        </div>
+
+    </div>
+
+    <script>
+        function toggleCustomBudget() {
+            const budgetSelect = document.getElementById('budget');
+            const customBudget = document.getElementById('custom_budget');
+            if (budgetSelect.value === 'custom') {
+                customBudget.style.display = 'block';
+                customBudget.required = true;
+            } else {
+                customBudget.style.display = 'none';
+                customBudget.required = false;
+            }
+        }
+
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/vsi-avti')
+                .then(res => res.text())
+                .then(html => {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    const carCards = tempDiv.querySelectorAll('.car-card h3');
+                    const carSelect = document.getElementById('car-select');
+                    carCards.forEach(card => {
+                        const option = document.createElement('option');
+                        option.value = card.textContent;
+                        option.textContent = card.textContent;
+                        carSelect.appendChild(option);
+                    });
+                    carSelect.addEventListener('change', showCalendar);
+                    showCalendar();
+                });
+
+            document.getElementById('reservation-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const car = document.getElementById('car-select').value;
+                const date = document.getElementById('date').value;
+                const time = document.getElementById('time').value;
+                fetch('/rezerviraj-termin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ car: car, date: date, time: time })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('reservation-message').innerText = data.message || data.error;
+                    showCalendar();
+                })
+                .catch(() => {
+                    document.getElementById('reservation-message').innerText = 'Napaka pri rezervaciji termina!';
+                });
+            });
+
+            function showCalendar() {
+                const car = document.getElementById('car-select').value;
+                fetch(`/koledar-terminov?car=${encodeURIComponent(car)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        let html = '<h4>Zasedeni termini</h4>';
+                        if (data && data.reservations && data.reservations.length > 0) {
+                            html += '<ul>';
+                            data.reservations.forEach(r => {
+                                html += `<li>${r.date} ob ${r.time}</li>`;
+                            });
+                            html += '</ul>';
+                        } else {
+                            html += '<p>Ni zasedenih terminov za ta avto.</p>';
+                        }
+                        document.getElementById('calendar-box').innerHTML = html;
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
